@@ -24,16 +24,18 @@ from homeassistant.helpers import entity_registry as er
 from .conftest import ENTITY_ID, STORE_REWE, FakeNorish
 
 
-async def _get_items(hass: HomeAssistant) -> list[dict[str, Any]]:
+async def _get_items(
+    hass: HomeAssistant, entity_id: str = ENTITY_ID
+) -> list[dict[str, Any]]:
     result = await hass.services.async_call(
         TODO_DOMAIN,
         TodoServices.GET_ITEMS,
         {},
-        target={ATTR_ENTITY_ID: ENTITY_ID},
+        target={ATTR_ENTITY_ID: entity_id},
         blocking=True,
         return_response=True,
     )
-    return result[ENTITY_ID]["items"]
+    return result[entity_id]["items"]
 
 
 async def _call(hass: HomeAssistant, service: str, data: dict[str, Any]) -> None:

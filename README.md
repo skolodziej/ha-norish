@@ -6,6 +6,8 @@ bereitstellt, ähnlich wie die offizielle Cookidoo-Integration.
 
 - Einträge anlegen, abhaken, zurücksetzen und löschen
 - Menge, Einheit und optional der Laden stehen in der Beschreibung, z. B. `200 g · Rewe`
+- Einheiten werden passend zur Systemsprache abgekürzt (`gram` → `g`,
+  `tablespoon` → `EL` bzw. `tbsp`). Eigene Einheiten bleiben unverändert.
 - Reihenfolge wie in Norish (`sortOrder`)
 - Nach jedem Schreibzugriff ist der Zustand sofort aktuell. Ein
   `todo.get_items` direkt nach `todo.add_item` enthält den neuen Eintrag bereits.

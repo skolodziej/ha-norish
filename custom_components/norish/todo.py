@@ -18,6 +18,7 @@ from .api import Grocery, Store, format_amount
 from .const import CONF_SHOW_STORE, DEFAULT_SHOW_STORE, DESCRIPTION_SEPARATOR, DOMAIN
 from .coordinator import NorishConfigEntry, NorishDataUpdateCoordinator
 from .entity import NorishEntity
+from .units import short_unit
 
 # Writes are serialized in the coordinator.
 PARALLEL_UPDATES = 0
@@ -33,12 +34,14 @@ async def async_setup_entry(
 
 
 def describe_grocery(
-    grocery: Grocery, stores: dict[str, Store], show_store: bool
+    grocery: Grocery,
+    stores: dict[str, Store],
+    show_store: bool,
+    language: str = "en",
 ) -> str | None:
     """Build a readable description like ``200 g · Rewe``."""
-    quantity = " ".join(
-        part for part in (format_amount(grocery.amount), grocery.unit) if part
-    )
+    unit = short_unit(grocery.unit, language) if grocery.unit else None
+    quantity = " ".join(part for part in (format_amount(grocery.amount), unit) if part)
     parts = [quantity] if quantity else []
     store = stores.get(grocery.store_id) if grocery.store_id else None
     if show_store and store and store.name:
@@ -79,7 +82,10 @@ class NorishGroceryListEntity(NorishEntity, TodoListEntity):
                 else TodoItemStatus.NEEDS_ACTION
             ),
             description=describe_grocery(
-                grocery, self.coordinator.data.stores, self._show_store
+                grocery,
+                self.coordinator.data.stores,
+                self._show_store,
+                self.hass.config.language,
             ),
         )
 
