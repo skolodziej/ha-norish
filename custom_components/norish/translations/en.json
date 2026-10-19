@@ -1,0 +1,92 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect Norish",
+        "description": "Connect your self-hosted Norish instance. Create an API key in Norish under Settings → User → API keys.",
+        "data": {
+          "url": "URL",
+          "api_key": "API key"
+        },
+        "data_description": {
+          "url": "Address of your Norish instance, e.g. https://norish.example.com",
+          "api_key": "API key from Settings → User → API keys"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Norish",
+        "description": "The API key for {url} is no longer valid. Enter a new API key.",
+        "data": {
+          "api_key": "API key"
+        },
+        "data_description": {
+          "api_key": "API key from Settings → User → API keys"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to Norish. Check the URL and that the instance is reachable.",
+      "invalid_auth": "The API key was rejected.",
+      "invalid_url": "Invalid URL.",
+      "unexpected_response": "Norish returned an unexpected response. Is this really a Norish instance?",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This Norish instance is already configured.",
+      "reauth_successful": "Re-authentication was successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Norish options",
+        "data": {
+          "scan_interval": "Polling interval",
+          "show_store": "Show store name in description"
+        },
+        "data_description": {
+          "scan_interval": "How often the grocery list is fetched, in seconds (minimum 15).",
+          "show_store": "Appends the store assigned in Norish to the description, e.g. \"200 g · Rewe\"."
+        }
+      }
+    }
+  },
+  "device": {
+    "norish": {
+      "name": "Norish"
+    }
+  },
+  "entity": {
+    "todo": {
+      "groceries": {
+        "name": "Shopping list"
+      }
+    }
+  },
+  "exceptions": {
+    "cannot_connect": {
+      "message": "Failed to connect to Norish."
+    },
+    "invalid_auth": {
+      "message": "The Norish API key was rejected. Please re-authenticate."
+    },
+    "unexpected_response": {
+      "message": "Norish returned an unexpected response."
+    },
+    "stale_version": {
+      "message": "\"{name}\" was changed in Norish at the same time. Please try again."
+    },
+    "item_not_found": {
+      "message": "The item {uid} no longer exists in Norish."
+    },
+    "rename_not_supported": {
+      "message": "Norish does not support renaming items. Only checking and unchecking is possible."
+    },
+    "description_not_supported": {
+      "message": "Norish does not support changing the description. Amount, unit and store can only be changed in Norish."
+    },
+    "empty_name": {
+      "message": "The item name must not be empty."
+    }
+  }
+}

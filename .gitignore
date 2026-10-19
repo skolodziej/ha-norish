@@ -1,0 +1,25 @@
+# Python / tooling
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+uv.lock
+
+# Secrets and local config – never commit API keys or instance URLs
+.env
+.env.*
+*.local
+secrets.yaml
+smoke*.py
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

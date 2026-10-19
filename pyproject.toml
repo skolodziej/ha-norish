@@ -1,0 +1,27 @@
+[project]
+name = "ha-norish"
+version = "0.1.0"
+requires-python = ">=3.14"
+
+[dependency-groups]
+dev = ["pytest-homeassistant-custom-component", "ruff"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF", "PL", "D", "ANN", "ASYNC", "BLE", "C4", "PT", "RET", "TC", "N", "S"]
+ignore = ["D203", "D213", "PLR2004", "PLR0913", "S101", "TC001", "TC002", "TC003", "E501", "ANN401"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D", "ANN", "PLC0415", "PLR0911", "PLR0912", "PLR0917", "S105", "S106"]
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+known-first-party = ["homeassistant", "custom_components"]
+combine-as-imports = true
