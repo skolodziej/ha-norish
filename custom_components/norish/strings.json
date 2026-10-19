@@ -9,7 +9,7 @@
           "api_key": "API key"
         },
         "data_description": {
-          "url": "Address of your Norish instance, e.g. https://norish.example.com",
+          "url": "Address of your Norish instance, e.g. {example_url}",
           "api_key": "API key from Settings → User → API keys"
         }
       },

@@ -103,6 +103,7 @@ class NorishConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=self.add_suggested_values_to_schema(
                 USER_SCHEMA, {CONF_URL: (user_input or {}).get(CONF_URL)}
             ),
+            description_placeholders={"example_url": "https://norish.example.com"},
             errors=errors,
         )
 

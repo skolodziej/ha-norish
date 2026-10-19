@@ -9,7 +9,7 @@
           "api_key": "API-Key"
         },
         "data_description": {
-          "url": "Adresse deiner Norish-Instanz, z. B. https://norish.example.com",
+          "url": "Adresse deiner Norish-Instanz, z. B. {example_url}",
           "api_key": "API-Key aus Einstellungen → Benutzer → API-Keys"
         }
       },
