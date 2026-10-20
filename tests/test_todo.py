@@ -1,9 +1,14 @@
 """Tests for the Norish todo entity."""
 
+from datetime import timedelta
 from typing import Any
 
+from freezegun.api import FrozenDateTimeFactory
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    async_fire_time_changed,
+)
 
 from custom_components.norish.const import CONF_SHOW_STORE, DOMAIN
 from homeassistant.components.todo import (
@@ -348,13 +353,36 @@ async def test_write_connection_error(
     assert exc_info.value.translation_key == "cannot_connect"
 
 
-async def test_write_auth_error_starts_reauth(
-    hass: HomeAssistant, init_integration: MockConfigEntry, mock_norish: FakeNorish
+async def test_write_auth_error_does_not_start_reauth(
+    hass: HomeAssistant,
+    init_integration: MockConfigEntry,
+    mock_norish: FakeNorish,
+    freezer: FrozenDateTimeFactory,
 ) -> None:
     mock_norish.auth_ok = False
     with pytest.raises(HomeAssistantError) as exc_info:
         await _call(hass, TodoServices.ADD_ITEM, {ATTR_ITEM: "Eier"})
-    assert exc_info.value.translation_key == "invalid_auth"
+    assert exc_info.value.translation_key == "auth_rejected"
     await hass.async_block_till_done()
+    assert hass.config_entries.flow.async_progress_by_handler(DOMAIN) == []
+
+    # The write counts towards the threshold: two more rejected polls
+    # start reauth.
+    for _ in range(2):
+        freezer.tick(timedelta(seconds=60))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
     flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
     assert [f["context"]["source"] for f in flows] == [SOURCE_REAUTH]
+
+
+async def test_write_auth_error_then_success(
+    hass: HomeAssistant, init_integration: MockConfigEntry, mock_norish: FakeNorish
+) -> None:
+    mock_norish.auth_ok = False
+    with pytest.raises(HomeAssistantError):
+        await _call(hass, TodoServices.ADD_ITEM, {ATTR_ITEM: "Eier"})
+    mock_norish.auth_ok = True
+    await _call(hass, TodoServices.ADD_ITEM, {ATTR_ITEM: "Eier"})
+    assert [i["summary"] for i in await _get_items(hass)] == ["Eier"]
+    assert init_integration.runtime_data._auth_failures == 0

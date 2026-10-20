@@ -87,6 +87,12 @@
     },
     "empty_name": {
       "message": "Der Name des Eintrags darf nicht leer sein."
+    },
+    "auth_rejected": {
+      "message": "Norish hat den API-Key abgelehnt. Hält das an, wirst du zur erneuten Anmeldung aufgefordert."
+    },
+    "auth_rejected_retry": {
+      "message": "Norish hat den API-Key abgelehnt ({count}/{threshold}), neuer Versuch folgt."
     }
   }
 }

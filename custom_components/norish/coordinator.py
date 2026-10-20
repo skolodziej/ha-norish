@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable
 import contextlib
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from typing import NoReturn
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -29,6 +30,7 @@ from .api import (
     WriteResult,
 )
 from .const import (
+    AUTH_FAILURE_THRESHOLD,
     CONF_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -66,7 +68,7 @@ def _write_error(err: NorishError) -> HomeAssistantError:
     if isinstance(err, NorishConnectionError):
         key = "cannot_connect"
     elif isinstance(err, NorishAuthError):
-        key = "invalid_auth"
+        key = "auth_rejected"
     else:
         key = "unexpected_response"
     return HomeAssistantError(translation_domain=DOMAIN, translation_key=key)
@@ -98,16 +100,18 @@ class NorishDataUpdateCoordinator(DataUpdateCoordinator[NorishData]):
         self._lock = asyncio.Lock()
         self._stores: dict[str, Store] = {}
         self._stores_fetched: datetime | None = None
+        # Consecutive requests rejected with 401/403. A single rejection is
+        # often transient (e.g. Norish restarting), so reauth only starts
+        # once it persists and Norish itself reports healthy.
+        self._auth_failures = 0
 
     async def _async_update_data(self) -> NorishData:
         """Fetch groceries (and stores, when due)."""
         async with self._lock:
             try:
-                return await self._async_fetch()
+                data = await self._async_fetch()
             except NorishAuthError as err:
-                raise ConfigEntryAuthFailed(
-                    translation_domain=DOMAIN, translation_key="invalid_auth"
-                ) from err
+                await self._async_handle_auth_failure(err)
             except NorishConnectionError as err:
                 raise UpdateFailed(
                     translation_domain=DOMAIN, translation_key="cannot_connect"
@@ -116,6 +120,39 @@ class NorishDataUpdateCoordinator(DataUpdateCoordinator[NorishData]):
                 raise UpdateFailed(
                     translation_domain=DOMAIN, translation_key="unexpected_response"
                 ) from err
+            self._auth_failures = 0
+            return data
+
+    async def _async_handle_auth_failure(self, err: NorishAuthError) -> NoReturn:
+        """Decide whether a rejected API key warrants reauthentication.
+
+        Raises ConfigEntryAuthFailed when the key was rejected repeatedly
+        (or during setup) while Norish is healthy, UpdateFailed otherwise.
+        """
+        self._auth_failures += 1
+        initial = self.data is None
+        if initial or self._auth_failures >= AUTH_FAILURE_THRESHOLD:
+            if await self._async_norish_healthy():
+                raise ConfigEntryAuthFailed(
+                    translation_domain=DOMAIN, translation_key="invalid_auth"
+                ) from err
+            LOGGER.debug("API key rejected while Norish is unhealthy, retrying")
+        raise UpdateFailed(
+            translation_domain=DOMAIN,
+            translation_key="auth_rejected_retry",
+            translation_placeholders={
+                "count": str(self._auth_failures),
+                "threshold": str(AUTH_FAILURE_THRESHOLD),
+            },
+        ) from err
+
+    async def _async_norish_healthy(self) -> bool:
+        """Return True if the public health endpoint reports ok."""
+        try:
+            health = await self.client.async_get_health()
+        except NorishError:
+            return False
+        return health.get("status") == "ok"
 
     async def _async_fetch(self) -> NorishData:
         """Fetch the current state. Caller must hold the lock."""
@@ -165,12 +202,17 @@ class NorishDataUpdateCoordinator(DataUpdateCoordinator[NorishData]):
         """Run a write under the lock and map API errors."""
         async with self._lock:
             try:
-                return await func()
+                result = await func()
             except NorishAuthError as err:
-                self.config_entry.async_start_reauth(self.hass)
+                # Counts towards reauth; the next poll decides (see
+                # _async_handle_auth_failure) instead of a single write.
+                self._auth_failures += 1
+                self.hass.async_create_task(self.async_request_refresh())
                 raise _write_error(err) from err
             except NorishError as err:
                 raise _write_error(err) from err
+            self._auth_failures = 0
+            return result
 
     async def async_create_grocery(self, name: str) -> Grocery | None:
         """Create a grocery and make it visible immediately."""

@@ -43,8 +43,11 @@ Manuell geht es auch: den Ordner `custom_components/norish` nach
 
 Die Integration prüft die Daten mit einem Abruf der Einkaufsliste. Jede
 Instanz (normalisierte URL) lässt sich nur einmal einrichten. Wird der Key
-später ungültig (HTTP 401/403), fordert Home Assistant zur erneuten Anmeldung
-auf.
+später abgelehnt (HTTP 401/403), wertet die Integration das zunächst als
+vorübergehende Störung, z. B. weil Norish gerade neu startet. Die Entität ist
+dann kurz nicht verfügbar und erholt sich selbst. Erst nach drei abgelehnten
+Abrufen in Folge, und nur wenn Norish laut `/health` sonst gesund ist, fordert
+Home Assistant zur erneuten Anmeldung auf.
 
 Danach gibt es die Entität `todo.norish_einkaufsliste` (bei englischer
 Systemsprache `todo.norish_shopping_list`).

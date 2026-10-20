@@ -17,4 +17,6 @@ DEFAULT_SHOW_STORE: Final = True
 STORES_REFRESH_INTERVAL: Final = timedelta(minutes=15)
 STORES_MISSING_RETRY_INTERVAL: Final = timedelta(minutes=1)
 
+AUTH_FAILURE_THRESHOLD: Final = 3
+
 DESCRIPTION_SEPARATOR: Final = " · "

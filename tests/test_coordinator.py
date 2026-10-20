@@ -116,7 +116,46 @@ async def test_connection_loss_makes_entity_unavailable(
     assert hass.states.get(ENTITY_ID).state == "0"
 
 
-async def test_auth_failure_during_poll_starts_reauth(
+def _reauth_flows(hass: HomeAssistant) -> list[str]:
+    return [
+        f["context"]["source"]
+        for f in hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+    ]
+
+
+async def test_single_auth_failure_recovers_without_reauth(
+    hass: HomeAssistant,
+    init_integration: MockConfigEntry,
+    mock_norish: FakeNorish,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """A transient 401 (e.g. Norish restarting) must not trigger reauth."""
+    mock_norish.auth_ok = False
+    await _tick(hass, freezer, 60)
+    assert hass.states.get(ENTITY_ID).state == STATE_UNAVAILABLE
+    assert _reauth_flows(hass) == []
+
+    mock_norish.auth_ok = True
+    mock_norish.add("Milch")
+    await _tick(hass, freezer, 60)
+    assert hass.states.get(ENTITY_ID).state == "1"
+    assert _reauth_flows(hass) == []
+
+
+async def test_counter_resets_after_success(
+    hass: HomeAssistant,
+    init_integration: MockConfigEntry,
+    mock_norish: FakeNorish,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    for auth_ok in (False, False, True, False, False, True):
+        mock_norish.auth_ok = auth_ok
+        await _tick(hass, freezer, 60)
+    assert _reauth_flows(hass) == []
+    assert hass.states.get(ENTITY_ID).state == "0"
+
+
+async def test_persistent_auth_failure_starts_reauth(
     hass: HomeAssistant,
     init_integration: MockConfigEntry,
     mock_norish: FakeNorish,
@@ -124,5 +163,37 @@ async def test_auth_failure_during_poll_starts_reauth(
 ) -> None:
     mock_norish.auth_ok = False
     await _tick(hass, freezer, 60)
-    flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
-    assert [f["context"]["source"] for f in flows] == [SOURCE_REAUTH]
+    await _tick(hass, freezer, 60)
+    assert _reauth_flows(hass) == []
+    await _tick(hass, freezer, 60)
+    assert _reauth_flows(hass) == [SOURCE_REAUTH]
+    assert mock_norish.count("GET", "/health") == 1
+
+
+async def test_auth_failure_while_unhealthy_keeps_retrying(
+    hass: HomeAssistant,
+    init_integration: MockConfigEntry,
+    mock_norish: FakeNorish,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    mock_norish.auth_ok = False
+    mock_norish.healthy = False
+    for _ in range(5):
+        await _tick(hass, freezer, 60)
+    assert _reauth_flows(hass) == []
+    # Polling continues, so the entity recovers on its own.
+    mock_norish.auth_ok = True
+    mock_norish.healthy = True
+    await _tick(hass, freezer, 60)
+    assert hass.states.get(ENTITY_ID).state == "0"
+
+
+async def test_setup_auth_failure_while_unhealthy_retries_setup(
+    hass: HomeAssistant, config_entry: MockConfigEntry, mock_norish: FakeNorish
+) -> None:
+    mock_norish.auth_ok = False
+    mock_norish.healthy = False
+    config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(config_entry.entry_id)
+    assert config_entry.state is ConfigEntryState.SETUP_RETRY
+    assert _reauth_flows(hass) == []

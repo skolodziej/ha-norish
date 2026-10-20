@@ -38,6 +38,7 @@ class FakeNorish:
         self.stores: list[dict[str, Any]] = [{"id": STORE_REWE, "name": "Rewe"}]
         self.auth_ok = True
         self.down = False
+        self.healthy = True
         self.fail_status: HTTPStatus | None = None
         # Bump the version before each versioned write (simulates a
         # concurrent change). Number of remaining bumps.
@@ -95,6 +96,13 @@ class FakeNorish:
             return self._resp(method, url, {"error": "x"}, self.fail_status)
 
         if method == "GET" and path == "/health":
+            if not self.healthy:
+                return self._resp(
+                    method,
+                    url,
+                    {"status": "error"},
+                    HTTPStatus.SERVICE_UNAVAILABLE,
+                )
             return self._resp(method, url, {"status": "ok"})
         if method == "GET" and path == "/groceries":
             return self._resp(method, url, list(self.groceries.values()))

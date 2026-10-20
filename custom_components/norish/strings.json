@@ -87,6 +87,12 @@
     },
     "empty_name": {
       "message": "The item name must not be empty."
+    },
+    "auth_rejected": {
+      "message": "Norish rejected the API key. If this persists, you will be asked to re-authenticate."
+    },
+    "auth_rejected_retry": {
+      "message": "Norish rejected the API key ({count}/{threshold}), retrying."
     }
   }
 }
